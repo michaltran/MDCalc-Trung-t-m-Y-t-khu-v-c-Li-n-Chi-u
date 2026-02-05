@@ -1,29 +1,36 @@
+
 import { GoogleGenAI } from "@google/genai";
 
 export async function getClinicalContext(calculatorName: string, result: string, score: number) {
   try {
     const apiKey = process.env.API_KEY;
-    if (!apiKey) {
-      return "Cấu hình AI chưa sẵn sàng. Vui lòng kiểm tra API Key.";
+    if (!apiKey || apiKey === "") {
+      console.warn("API Key is missing. AI features will not work.");
+      return "Tính năng tư vấn AI chưa được cấu hình API Key. Vui lòng liên hệ quản trị viên (Đạt Đạt) để kích hoạt.";
     }
 
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `Bạn là một bác sĩ cố vấn chuyên môn. Một bệnh nhân có kết quả từ công cụ "${calculatorName}" với số điểm là ${score} (${result}). 
-      Hãy giải thích ngắn gọn bằng tiếng Việt:
-      1. Ý nghĩa lâm sàng của điểm số này là gì?
-      2. Các bước xử trí tiếp theo khuyến cáo (Next steps)?
-      3. Những lưu ý quan trọng hoặc cạm bẫy (pitfalls) khi sử dụng thang điểm này?
-      
-      Trả lời súc tích, chuyên nghiệp theo phong cách y khoa.`,
+      contents: `Bạn là một bác sĩ cố vấn cao cấp chuyên về các thang điểm y khoa. 
+      Thông tin bệnh nhân:
+      - Công cụ sử dụng: ${calculatorName}
+      - Kết quả: ${score} điểm
+      - Diễn giải: ${result}
+
+      Hãy cung cấp tư vấn lâm sàng ngắn gọn bằng tiếng Việt bao gồm:
+      1. Đánh giá nhanh tình trạng: Mức độ nguy hiểm hiện tại.
+      2. Hướng xử trí: Các xét nghiệm hoặc can thiệp cần thực hiện ngay.
+      3. Cảnh báo lâm sàng: Những điều dễ nhầm lẫn hoặc cần lưu ý thêm ở bệnh nhân này.
+
+      Yêu cầu: Trình bày súc tích, chuyên nghiệp, định dạng dễ nhìn.`,
       config: {
-        temperature: 0.7,
+        temperature: 0.2,
       }
     });
     return response.text;
   } catch (error) {
-    console.error("Gemini Error:", error);
-    return "Không thể tải phân tích lâm sàng lúc này. Vui lòng thử lại sau.";
+    console.error("Gemini AI error:", error);
+    return "Hệ thống AI đang bận hoặc gặp lỗi kết nối. Vui lòng thử lại sau.";
   }
 }

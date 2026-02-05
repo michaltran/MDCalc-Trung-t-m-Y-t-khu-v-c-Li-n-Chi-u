@@ -19,8 +19,8 @@ const CalculatorView: React.FC<CalculatorViewProps> = ({ calc, onBack, onNavigat
   useEffect(() => {
     const defaults: Record<string, number> = {};
     calc.inputs.forEach(input => {
-      if (input.type === 'number' && input.defaultValue !== undefined) {
-        defaults[input.id] = input.defaultValue;
+      if (input.type === 'number') {
+        defaults[input.id] = input.defaultValue ?? 0;
       } else if (input.type === 'select' && input.options) {
         defaults[input.id] = input.options[0].value;
       } else {
@@ -38,30 +38,39 @@ const CalculatorView: React.FC<CalculatorViewProps> = ({ calc, onBack, onNavigat
     setValues(prev => ({ ...prev, [id]: val }));
   };
 
-  const renderSegmentedControl = (input: CalculatorInput) => {
+  const renderInput = (input: CalculatorInput) => {
+    if (input.type === 'number') {
+      return (
+        <div className="flex items-center space-x-2">
+          <input 
+            type="number" 
+            className="border-2 border-gray-200 rounded-lg p-2.5 text-lg w-full focus:border-blue-500 outline-none transition-all font-semibold"
+            value={values[input.id] ?? ''}
+            onChange={(e) => updateValue(input.id, parseFloat(e.target.value) || 0)}
+          />
+          {input.unit && <span className="text-gray-500 font-bold text-sm w-16">{input.unit}</span>}
+        </div>
+      );
+    }
+
     const options = input.type === 'boolean' 
-      ? [{ label: 'Không', value: 0, displayValue: '0' }, { label: 'Có', value: 1, displayValue: '+1' }]
+      ? [{ label: 'Không', value: 0 }, { label: 'Có', value: 1 }]
       : input.options || [];
 
-    const finalOptions = options.map(opt => {
-      if (input.id === 'stroke' && opt.value === 1) return { ...opt, displayValue: '+2' };
-      return opt;
-    });
-
     return (
-      <div className="flex w-full bg-[#f1f3f4] rounded-md p-1 border border-[#e0e4e7]">
-        {finalOptions.map((opt) => (
+      <div className="flex flex-wrap gap-2">
+        {options.map((opt) => (
           <button
             key={opt.label}
             onClick={() => updateValue(input.id, opt.value)}
-            className={`flex-1 flex justify-center items-center py-2 px-4 rounded transition-all text-sm font-semibold
+            className={`px-4 py-2.5 rounded-lg text-sm font-bold border-2 transition-all flex-1 min-w-[80px]
               ${values[input.id] === opt.value 
-                ? 'bg-blue-600 text-white shadow-sm' 
-                : 'text-[#5f6368] hover:bg-[#e8eaed]'}`}
+                ? 'bg-blue-600 text-white border-blue-600 shadow-md' 
+                : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'}`}
           >
-            <span className="mr-2">{opt.label}</span>
-            <span className={`text-[11px] opacity-70 ${values[input.id] === opt.value ? 'text-white' : 'text-gray-400'}`}>
-              {opt.displayValue || (opt.value > 0 ? `+${opt.value}` : '0')}
+            {opt.label}
+            <span className="ml-1 opacity-50 text-[10px]">
+               {opt.displayValue || (opt.value > 0 ? `+${opt.value}` : '')}
             </span>
           </button>
         ))}
@@ -70,79 +79,63 @@ const CalculatorView: React.FC<CalculatorViewProps> = ({ calc, onBack, onNavigat
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 bg-[#f8f9fa] min-h-screen">
-      <button 
-        onClick={onBack}
-        className="mb-6 flex items-center text-blue-600 font-bold hover:underline"
-      >
-        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-        QUAY LẠI DANH SÁCH
-      </button>
+    <div className="max-w-7xl mx-auto px-4 py-8 bg-[#f8fafc] min-h-screen">
+      <nav className="mb-6">
+        <button 
+          onClick={onBack}
+          className="flex items-center text-blue-600 font-black text-sm uppercase tracking-tighter hover:opacity-80 transition-opacity"
+        >
+          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15 19l-7-7 7-7"></path></svg>
+          DANH SÁCH CÔNG CỤ
+        </button>
+      </nav>
 
-      <div className="flex flex-col lg:flex-row gap-8">
-        <div className="flex-1 space-y-6">
-          <div className="flex justify-between items-start">
-             <div>
-                <h1 className="text-3xl font-bold text-[#3c4043] mb-2">{calc.name}</h1>
-                <p className="text-[#5f6368] text-sm">{calc.description}</p>
-             </div>
-             <div className="flex gap-4 text-[#5f6368] text-sm">
-                <button className="flex items-center hover:text-blue-600"><span className="mr-1">☆</span> Lưu</button>
-                <button className="flex items-center hover:text-blue-600"><span className="mr-1">⎋</span> Chia sẻ</button>
-             </div>
-          </div>
+      <div className="flex flex-col lg:flex-row gap-10">
+        <div className="flex-1 space-y-8">
+          <header>
+             <h1 className="text-4xl font-black text-gray-900 mb-2 tracking-tight">{calc.name}</h1>
+             <p className="text-gray-500 font-medium">{calc.description}</p>
+          </header>
 
-          <div className="bg-[#f1f3f4] rounded-lg border border-[#e0e4e7] overflow-hidden">
-            <div className="flex border-b border-[#e0e4e7]">
+          <div className="bg-white border-2 border-gray-100 rounded-3xl overflow-hidden shadow-sm">
+            <div className="flex bg-gray-50 border-b-2 border-gray-100">
               <button 
                 onClick={() => setActiveTab('when')}
-                className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-colors border-r border-[#e0e4e7] ${activeTab === 'when' ? 'bg-white text-blue-600' : 'text-gray-500 hover:bg-gray-100'}`}
+                className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-r-2 border-gray-100 transition-all ${activeTab === 'when' ? 'bg-white text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
               >
-                Khi nào dùng
+                Chỉ định
               </button>
               <button 
                 onClick={() => setActiveTab('pearls')}
-                className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-colors border-r border-[#e0e4e7] ${activeTab === 'pearls' ? 'bg-white text-blue-600' : 'text-gray-500 hover:bg-gray-100'}`}
+                className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-r-2 border-gray-100 transition-all ${activeTab === 'pearls' ? 'bg-white text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
               >
-                Lưu ý/Cạm bẫy
+                Lưu ý
               </button>
               <button 
                 onClick={() => setActiveTab('why')}
-                className={`flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-colors ${activeTab === 'why' ? 'bg-white text-blue-600' : 'text-gray-500 hover:bg-gray-100'}`}
+                className={`px-6 py-4 text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'why' ? 'bg-white text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
               >
-                Tại sao dùng
+                Cơ sở
               </button>
             </div>
-            <div className="p-4 bg-white text-sm text-[#3c4043] leading-relaxed">
-               {activeTab === 'when' && (calc.whenToUse || "Sử dụng trong đánh giá lâm sàng thường quy.")}
-               {activeTab === 'pearls' && (calc.pearls || "Kết quả phải được đối chiếu với tình trạng lâm sàng thực tế.")}
-               {activeTab === 'why' && (calc.whyUse || "Dựa trên các nghiên cứu và bằng chứng y học hiện hành.")}
+            <div className="p-6 text-gray-700 text-sm leading-relaxed font-medium">
+               {activeTab === 'when' && (calc.whenToUse || "Sử dụng để sàng lọc và đánh giá ban đầu trên lâm sàng.")}
+               {activeTab === 'pearls' && (calc.pearls || "Kết quả tính toán chỉ mang tính chất tham khảo, không thay thế chẩn đoán của bác sĩ.")}
+               {activeTab === 'why' && (calc.whyUse || "Dựa trên các nghiên cứu lâm sàng đã được công bố.")}
             </div>
           </div>
 
-          <div className="bg-white border border-[#e0e4e7] rounded-lg overflow-hidden">
+          <div className="bg-white border-2 border-gray-100 rounded-3xl shadow-sm p-2">
             <table className="w-full">
               <tbody>
                 {calc.inputs.map((input, idx) => (
-                  <tr key={input.id} className={`${idx !== calc.inputs.length - 1 ? 'border-b border-[#f1f3f4]' : ''}`}>
-                    <td className="p-4 w-1/3">
-                      <div className="flex flex-col">
-                        <span className="font-semibold text-[#3c4043] text-sm">{input.label}</span>
-                        {input.helpText && <span className="text-xs text-gray-400 mt-1">{input.helpText}</span>}
-                      </div>
+                  <tr key={input.id} className={`${idx !== calc.inputs.length - 1 ? 'border-b-2 border-gray-50' : ''}`}>
+                    <td className="p-5 w-1/2">
+                      <label className="font-bold text-gray-900 text-base">{input.label}</label>
+                      {input.helpText && <p className="text-xs text-gray-400 mt-1">{input.helpText}</p>}
                     </td>
-                    <td className="p-4 w-2/3">
-                      {input.type === 'number' ? (
-                        <div className="flex items-center">
-                          <input 
-                            type="number" 
-                            className="border border-[#e0e4e7] rounded p-2 text-sm w-full focus:ring-1 focus:ring-blue-500 outline-none"
-                            value={values[input.id] ?? ''}
-                            onChange={(e) => updateValue(input.id, parseFloat(e.target.value))}
-                          />
-                          {input.unit && <span className="ml-2 text-xs text-gray-500">{input.unit}</span>}
-                        </div>
-                      ) : renderSegmentedControl(input)}
+                    <td className="p-5 w-1/2">
+                      {renderInput(input)}
                     </td>
                   </tr>
                 ))}
@@ -150,100 +143,101 @@ const CalculatorView: React.FC<CalculatorViewProps> = ({ calc, onBack, onNavigat
             </table>
           </div>
 
-          <div className={`${result.color} rounded-lg p-6 text-white shadow-lg`}>
-            <div className="flex items-baseline mb-2">
-              <span className="text-4xl font-bold mr-2">{result.score}</span>
-              <span className="text-xl font-medium opacity-90">điểm</span>
-            </div>
-            <p className="text-lg font-bold mb-4">{result.interpretation}</p>
-            {result.details && <p className="text-sm opacity-90 border-t border-white/20 pt-4 mb-6">{result.details}</p>}
-            
-            <div className="flex flex-wrap gap-3">
-               <button className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded font-bold text-sm flex items-center transition-colors">
-                 Sao chép <span className="ml-2">⎙</span>
-               </button>
-               <button className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded font-bold text-sm flex items-center transition-colors">
-                 Bước tiếp theo <span className="ml-2">⋙</span>
-               </button>
+          <div className={`${result.color} rounded-[2rem] p-10 text-white shadow-2xl shadow-blue-200 transition-all`}>
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+               <div className="flex-1">
+                  <div className="flex items-baseline mb-4">
+                    <span className="text-7xl font-black mr-3">{result.score}</span>
+                    <span className="text-2xl font-bold opacity-80 uppercase tracking-widest">Điểm</span>
+                  </div>
+                  <h2 className="text-3xl font-black leading-tight mb-4">{result.interpretation}</h2>
+                  {result.details && <p className="text-white/80 font-semibold border-l-4 border-white/30 pl-4">{result.details}</p>}
+               </div>
+               
+               <div className="flex flex-col gap-3 min-w-[200px]">
+                  <button className="bg-white/20 hover:bg-white/30 backdrop-blur-md px-6 py-4 rounded-2xl font-black text-sm uppercase tracking-wider transition-all active:scale-95 flex items-center justify-center">
+                    Sao chép KQ <span className="ml-2">📋</span>
+                  </button>
+                  <button className="bg-white text-blue-800 px-6 py-4 rounded-2xl font-black text-sm uppercase tracking-wider transition-all hover:bg-gray-100 active:scale-95 flex items-center justify-center shadow-lg">
+                    Pháp đồ <span className="ml-2">➔</span>
+                  </button>
+               </div>
             </div>
           </div>
 
-          <button
-            onClick={async () => {
-              setLoadingAi(true);
-              const analysis = await getClinicalContext(calc.name, result.interpretation, result.score);
-              setAiAnalysis(analysis);
-              setLoadingAi(false);
-            }}
-            className="w-full py-4 bg-blue-50 border border-blue-200 text-blue-700 font-bold rounded-lg hover:bg-blue-100 transition-colors flex items-center justify-center"
-          >
-            {loadingAi ? 'Đang phân tích AI...' : 'Tư vấn Chuyên sâu từ AI'}
-          </button>
+          <div className="space-y-4">
+             <button
+               onClick={async () => {
+                 setLoadingAi(true);
+                 const analysis = await getClinicalContext(calc.name, result.interpretation, result.score);
+                 setAiAnalysis(analysis);
+                 setLoadingAi(false);
+               }}
+               className="w-full py-5 bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-black text-lg rounded-2xl hover:shadow-xl transition-all flex items-center justify-center shadow-lg shadow-blue-100 disabled:opacity-50"
+               disabled={loadingAi}
+             >
+               {loadingAi ? (
+                 <span className="flex items-center">
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    Đang hội chẩn AI...
+                 </span>
+               ) : (
+                 <span className="flex items-center">
+                    Tư vấn chuyên sâu Bác sĩ AI ✨
+                 </span>
+               )}
+             </button>
 
-          {aiAnalysis && (
-            <div className="bg-white border border-blue-100 rounded-lg p-6 prose prose-sm max-w-none shadow-sm">
-              <h3 className="text-blue-800 font-bold mb-2 italic underline text-lg">Phân tích từ Bác sĩ AI (Đạt Đạt AI)</h3>
-              <div className="text-gray-700 whitespace-pre-line leading-relaxed">{aiAnalysis}</div>
-            </div>
-          )}
-
-          <div className="pt-8">
-            <h3 className="text-xs font-bold text-gray-400 uppercase mb-4 tracking-widest">Tài liệu tham khảo</h3>
-            <div className="bg-white border border-[#e0e4e7] rounded-lg p-6 text-sm text-[#3c4043] leading-relaxed italic">
-              {calc.evidence || "Thông tin đang được cập nhật từ các nguồn uy tín."}
-            </div>
+             {aiAnalysis && (
+               <div className="bg-white border-2 border-blue-50 rounded-3xl p-8 shadow-sm relative overflow-hidden">
+                 <div className="absolute top-0 right-0 p-4">
+                    <span className="bg-blue-100 text-blue-700 text-[10px] font-black px-2 py-1 rounded uppercase">Clinical AI Advisor</span>
+                 </div>
+                 <h3 className="text-blue-900 font-black mb-6 text-xl border-b-2 border-blue-50 pb-4">Phân tích từ Đạt Đạt AI Assistant</h3>
+                 <div className="text-gray-800 whitespace-pre-line leading-loose font-medium">{aiAnalysis}</div>
+               </div>
+             )}
           </div>
         </div>
 
-        <aside className="w-full lg:w-80 space-y-6">
+        <aside className="w-full lg:w-96 space-y-8">
           {calc.creator && (
-            <div className="bg-white border border-[#e0e4e7] rounded-lg overflow-hidden">
-               <div className="bg-[#f1f3f4] p-3 text-xs font-bold uppercase tracking-wider text-gray-600 border-b border-[#e0e4e7]">
-                 Tác giả
+            <div className="bg-white border-2 border-gray-100 rounded-3xl overflow-hidden shadow-sm">
+               <div className="bg-gray-50 p-4 text-[10px] font-black uppercase tracking-widest text-gray-400 border-b-2 border-gray-100">
+                 Hội đồng chuyên môn
                </div>
-               <div className="p-4 flex gap-4 items-center">
-                  <img src={calc.creator.image} className="w-16 h-16 rounded bg-gray-100" alt={calc.creator.name} />
+               <div className="p-6 flex items-center space-x-5">
+                  <img src={calc.creator.image} className="w-20 h-20 rounded-2xl bg-blue-50 object-cover border-2 border-white shadow-sm" alt={calc.creator.name} />
                   <div>
-                    <h4 className="font-bold text-[#3c4043] text-sm flex items-center">
-                      {calc.creator.name} <span className="ml-1 text-blue-500">✔</span>
+                    <h4 className="font-black text-gray-900 text-lg leading-tight">
+                      {calc.creator.name}
                     </h4>
-                    <p className="text-[11px] text-gray-500 mt-1 leading-snug">{calc.creator.title}</p>
+                    <p className="text-xs text-blue-600 font-bold mt-1 uppercase tracking-tighter">{calc.creator.title}</p>
                   </div>
                </div>
             </div>
           )}
 
-          <div className="bg-blue-900 rounded-lg overflow-hidden">
-             <div className="p-3 text-xs font-bold uppercase tracking-wider text-white bg-blue-950">
-               Cùng chuyên mục
+          <div className="bg-blue-900 rounded-[2.5rem] overflow-hidden shadow-xl">
+             <div className="p-5 text-[10px] font-black uppercase tracking-[0.2em] text-blue-300 bg-blue-950/50">
+               Có thể bạn quan tâm
              </div>
-             <div className="p-4 space-y-4">
-                <ul className="space-y-4">
-                   {calc.relatedIds?.map(id => {
-                      const related = CALCULATORS.find(c => c.id === id);
-                      if (!related) return null;
-                      return (
-                        <li key={id} className="group">
-                           <button 
-                            onClick={() => onNavigateToCalc?.(id)}
-                            className="text-left"
-                           >
-                             <div className="text-sm font-bold text-blue-300 group-hover:underline">{related.name}</div>
-                             <div className="text-[11px] text-[#b8c5d1] mt-1 leading-snug line-clamp-2">{related.description}</div>
-                           </button>
-                        </li>
-                      );
-                   })}
-                </ul>
+             <div className="p-6 space-y-6">
+                {calc.relatedIds?.map(id => {
+                  const related = CALCULATORS.find(c => c.id === id);
+                  if (!related) return null;
+                  return (
+                    <button 
+                      key={id}
+                      onClick={() => onNavigateToCalc?.(id)}
+                      className="w-full text-left group"
+                    >
+                      <h4 className="text-white font-black text-sm group-hover:text-blue-300 transition-colors">{related.name}</h4>
+                      <p className="text-blue-200/60 text-[11px] mt-1 line-clamp-2 font-medium">{related.description}</p>
+                    </button>
+                  );
+                })}
              </div>
-          </div>
-
-          <div className="bg-[#f1f3f4] rounded-lg p-4 border border-[#e0e4e7]">
-             <h5 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Người đóng góp</h5>
-             <ul className="text-xs text-[#3c4043] space-y-2 font-semibold">
-                <li>• Đạt Đạt (Designer & Translator)</li>
-                <li>• TTYT KV Liên Chiểu</li>
-             </ul>
           </div>
         </aside>
       </div>
