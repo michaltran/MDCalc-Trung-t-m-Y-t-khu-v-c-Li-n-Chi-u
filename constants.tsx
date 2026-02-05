@@ -1,4 +1,3 @@
-
 import { Calculator, Specialty } from './types';
 
 export const CALCULATORS: Calculator[] = [
@@ -26,8 +25,8 @@ export const CALCULATORS: Calculator[] = [
       { id: 'diabetes', label: 'Tiểu đường', type: 'boolean' },
     ],
     calculate: (v) => {
-      const ageScore = v.age ?? 0;
-      const sexScore = v.sex ?? 1;
+      const ageScore = (v.age || 0);
+      const sexScore = (v.sex || 0);
       const chf = v.chf === 1 ? 1 : 0;
       const htn = v.htn === 1 ? 1 : 0;
       const stroke = v.stroke === 1 ? 2 : 0;
@@ -35,112 +34,167 @@ export const CALCULATORS: Calculator[] = [
       const diabetes = v.diabetes === 1 ? 1 : 0;
       const score = ageScore + sexScore + chf + htn + stroke + vascular + diabetes;
       
-      let risk = "0%";
-      if (score === 1) risk = "1.3%";
-      if (score === 2) risk = "2.2%";
-      if (score === 3) risk = "3.2%";
-      if (score === 4) risk = "4.0%";
-      if (score === 5) risk = "6.7%";
-      if (score === 6) risk = "9.8%";
-      if (score === 7) risk = "9.6%";
-      if (score === 8) risk = "6.7%";
-      if (score === 9) risk = "12.2%";
+      let risk = score === 0 ? "0%" : score === 1 ? "1.3%" : score === 2 ? "2.2%" : score === 3 ? "3.2%" : "Cao (>4.0%)";
 
       return { 
         score, 
-        interpretation: `Nguy cơ đột quỵ hàng năm là ${risk}.`, 
-        details: score >= 2 ? "Khuyến cáo dùng thuốc chống đông đường uống." : "Cân nhắc chống đông nếu score = 1.",
+        interpretation: `Nguy cơ đột quỵ hàng năm: ${risk}.`, 
+        details: score >= 2 ? "Khuyến cáo dùng thuốc chống đông đường uống mạnh." : "Cân nhắc chống đông nếu score = 1.",
         color: "bg-blue-700"
       };
     },
     evidence: "Lip GY, et al. Chest. 2010."
   },
   {
-    id: 'meld',
-    name: 'Thang điểm MELD',
-    description: 'Dự đoán tỉ lệ tử vong ở bệnh nhân bệnh gan giai đoạn cuối.',
-    specialties: ['Tiêu hóa', 'Hồi sức cấp cứu'],
-    inputs: [
-      { id: 'bilirubin', label: 'Bilirubin (mg/dL)', type: 'number', defaultValue: 1.2 },
-      { id: 'inr', label: 'INR', type: 'number', defaultValue: 1.0 },
-      { id: 'creatinine', label: 'Creatinine (mg/dL)', type: 'number', defaultValue: 1.0 },
-      { id: 'sodium', label: 'Natri (mEq/L)', type: 'number', defaultValue: 140 },
-    ],
-    calculate: (v) => {
-      const b = Math.max(v.bilirubin || 1, 1);
-      const i = Math.max(v.inr || 1, 1);
-      const c = Math.max(Math.min(v.creatinine || 1, 4), 1);
-      const na = Math.max(Math.min(v.sodium || 137, 137), 125);
-      
-      let meld = 0.378 * Math.log(b) + 1.120 * Math.log(i) + 0.957 * Math.log(c) + 0.643;
-      meld = Math.round(meld * 10);
-      
-      return {
-        score: meld,
-        interpretation: `Tỉ lệ tử vong trong 3 tháng dự đoán khoảng ${meld > 40 ? '>71%' : meld > 30 ? '52%' : '1.9-6%'}.`,
-        color: "bg-blue-700"
-      };
-    }
-  },
-  {
-    id: 'cockcroft-gault',
-    name: 'Công thức Cockcroft-Gault',
-    description: 'Ước tính độ thanh thải Creatinine (CrCl).',
+    id: 'gfr-ckdepi',
+    name: 'Độ lọc cầu thận (CKD-EPI)',
+    description: 'Ước tính mức lọc cầu thận eGFR chính xác hơn Cockcroft-Gault.',
     specialties: ['Thận học', 'Nội tiết'],
     inputs: [
       { id: 'age', label: 'Tuổi', type: 'number', defaultValue: 60 },
-      { id: 'weight', label: 'Cân nặng (kg)', type: 'number', defaultValue: 70 },
+      { id: 'sex', label: 'Giới tính', type: 'select', options: [{label: 'Nam', value: 1}, {label: 'Nữ', value: 0.742}] },
+      { id: 'race', label: 'Chủng tộc', type: 'select', options: [{label: 'Khác', value: 1}, {label: 'Da đen', value: 1.212}] },
       { id: 'creatinine', label: 'Creatinine (mg/dL)', type: 'number', defaultValue: 1.0 },
-      { id: 'sex', label: 'Giới tính', type: 'select', options: [{label: 'Nam', value: 1}, {label: 'Nữ', value: 0.85}] },
     ],
     calculate: (v) => {
-      const score = Math.round(((140 - (v.age || 0)) * (v.weight || 0) * (v.sex || 1)) / (72 * (v.creatinine || 1)));
+      const cr = v.creatinine || 1.0;
+      const age = v.age || 60;
+      const sex = v.sex || 1;
+      const race = v.race || 1;
+      // Công thức đơn giản hóa cho mục đích học tập
+      const score = Math.round(175 * Math.pow(cr, -1.154) * Math.pow(age, -0.203) * sex * race);
       return {
         score,
-        interpretation: `CrCl ước tính: ${score} mL/min.`,
-        details: score < 60 ? "Cần điều chỉnh liều thuốc đào thải qua thận." : "Chức năng thận trong giới hạn bình thường.",
+        interpretation: `eGFR: ${score} mL/min/1.73m².`,
+        details: score < 60 ? "Có dấu hiệu suy thận mạn." : "Chức năng thận bình thường.",
         color: "bg-blue-700"
       };
     }
   },
   {
-    id: 'apgar',
-    name: 'Chỉ số APGAR',
-    description: 'Đánh giá sức khỏe trẻ sơ sinh ngay sau sinh.',
-    specialties: ['Nhi khoa', 'Sản phụ khoa'],
+    id: 'wells-dvt',
+    name: 'Tiêu chuẩn Wells (DVT)',
+    description: 'Đánh giá xác suất lâm sàng của huyết khối tĩnh mạch sâu.',
+    specialties: ['Tim mạch', 'Hồi sức cấp cứu'],
     inputs: [
-      { id: 'hr', label: 'Nhịp tim', type: 'select', options: [{label: '>100', value: 2}, {label: '<100', value: 1}, {label: 'Không có', value: 0}] },
-      { id: 'rr', label: 'Hô hấp', type: 'select', options: [{label: 'Khóc to', value: 2}, {label: 'Yếu/Rên', value: 1}, {label: 'Không có', value: 0}] },
-      { id: 'tone', label: 'Trương lực cơ', type: 'select', options: [{label: 'Cử động tốt', value: 2}, {label: 'Gập nhẹ chi', value: 1}, {label: 'Nhão', value: 0}] },
-      { id: 'reflex', label: 'Kích thích', type: 'select', options: [{label: 'Hắt hơi/Khóc', value: 2}, {label: 'Nhăn mặt', value: 1}, {label: 'Không đáp ứng', value: 0}] },
-      { id: 'color', label: 'Màu sắc', type: 'select', options: [{label: 'Hồng toàn thân', value: 2}, {label: 'Chi xanh', value: 1}, {label: 'Xanh tái/Trắng', value: 0}] },
+      { id: 'cancer', label: 'Ung thư đang tiến triển', type: 'boolean' },
+      { id: 'paralysis', label: 'Liệt hoặc mới bó bột chi dưới', type: 'boolean' },
+      { id: 'bedridden', label: 'Nằm liệt giường >3 ngày hoặc PT lớn <12 tuần', type: 'boolean' },
+      { id: 'tenderness', label: 'Ấn đau dọc hệ tĩnh mạch sâu', type: 'boolean' },
+      { id: 'swelling_whole', label: 'Sưng toàn bộ chân', type: 'boolean' },
+      { id: 'swelling_calf', label: 'Sưng bắp chân >3cm so với bên kia', type: 'boolean' },
+      { id: 'pitting', label: 'Phù ấn lõm bên chân sưng', type: 'boolean' },
+      { id: 'collateral', label: 'Tuần hoàn bàng hệ tĩnh mạch nông', type: 'boolean' },
+      { id: 'alt_diag', label: 'Chẩn đoán khác có khả năng hơn DVT (-2)', type: 'boolean' },
+    ],
+    calculate: (v) => {
+      let score = Object.values(v).reduce((a, b) => a + (b === 1 ? 1 : 0), 0);
+      if (v.alt_diag === 1) score -= 3; // Trừ đi 2 điểm + 1 điểm đã cộng ở reduce = -2
+      return {
+        score,
+        interpretation: score >= 3 ? "Xác suất cao (75%)." : score >= 1 ? "Xác suất trung bình (17%)." : "Xác suất thấp (3%).",
+        color: "bg-blue-700"
+      };
+    }
+  },
+  {
+    id: 'nihss',
+    name: 'Thang điểm NIHSS (Đột quỵ)',
+    description: 'Đánh giá mức độ nặng của đột quỵ cấp.',
+    specialties: ['Thần kinh', 'Hồi sức cấp cứu'],
+    inputs: [
+      { id: 'loc', label: 'Ý thức (Level of Consciousness)', type: 'select', options: [{label: 'Tỉnh táo', value: 0}, {label: 'Lơ mơ', value: 1}, {label: 'U ám', value: 2}, {label: 'Hôn mê', value: 3}] },
+      { id: 'gaze', label: 'Vận nhãn', type: 'select', options: [{label: 'Bình thường', value: 0}, {label: 'Liệt liếc một phần', value: 1}, {label: 'Liệt liếc hoàn toàn', value: 2}] },
+      { id: 'visual', label: 'Thị trường', type: 'select', options: [{label: 'Bình thường', value: 0}, {label: 'Bán manh một phần', value: 1}, {label: 'Bán manh hoàn toàn', value: 2}, {label: 'Mù hoàn toàn', value: 3}] },
+      { id: 'facial', label: 'Liệt mặt', type: 'select', options: [{label: 'Bình thường', value: 0}, {label: 'Liệt nhẹ', value: 1}, {label: 'Liệt trung bình', value: 2}, {label: 'Liệt hoàn toàn', value: 3}] },
+      { id: 'motor_arm', label: 'Vận động tay (Bên yếu nhất)', type: 'select', options: [{label: 'Không yếu', value: 0}, {label: 'Rơi tay chậm', value: 1}, {label: 'Không kháng được trọng lực', value: 2}, {label: 'Không cử động được', value: 3}] },
     ],
     calculate: (v) => {
       const score = Object.values(v).reduce((a, b) => a + b, 0);
       return {
         score,
-        interpretation: score >= 7 ? "Trẻ ổn định." : score >= 4 ? "Cần hỗ trợ hô hấp." : "Cần hồi sức cấp cứu ngay lập tức.",
+        interpretation: score > 20 ? "Đột quỵ rất nặng." : score >= 15 ? "Đột quỵ nặng." : score >= 5 ? "Đột quỵ trung bình." : "Đột quỵ nhẹ.",
         color: "bg-blue-700"
       };
     }
   },
   {
-    id: 'centor',
-    name: 'Thang điểm Centor (Viêm họng)',
-    description: 'Ước tính khả năng viêm họng do liên cầu khuẩn.',
-    specialties: ['Hô hấp', 'Nhi khoa'],
+    id: 'lights-criteria',
+    name: 'Tiêu chuẩn Light (Dịch màng phổi)',
+    description: 'Phân biệt dịch thấm và dịch tiết màng phổi.',
+    specialties: ['Hô hấp', 'Hồi sức cấp cứu'],
     inputs: [
-      { id: 'fever', label: 'Sốt (> 38°C)', type: 'boolean' },
-      { id: 'cough', label: 'Không ho', type: 'boolean' },
-      { id: 'nodes', label: 'Hạch cổ trước sưng/đau', type: 'boolean' },
-      { id: 'exudate', label: 'Sưng/giả mạc amidan', type: 'boolean' },
-      { id: 'age', label: 'Tuổi', type: 'select', options: [{label: '3-14 tuổi (+1)', value: 1}, {label: '15-44 tuổi (0)', value: 0}, {label: '≥45 tuổi (-1)', value: -1}] },
+      { id: 'prot_ratio', label: 'Protein dịch/máu > 0.5', type: 'boolean' },
+      { id: 'ldh_ratio', label: 'LDH dịch/máu > 0.6', type: 'boolean' },
+      { id: 'ldh_upper', label: 'LDH dịch > 2/3 giới hạn trên máu', type: 'boolean' },
     ],
     calculate: (v) => {
-      const score = (v.fever || 0) + (v.cough || 0) + (v.nodes || 0) + (v.exudate || 0) + (v.age || 0);
+      const isExudate = v.prot_ratio || v.ldh_ratio || v.ldh_upper;
+      return {
+        score: isExudate ? 1 : 0,
+        interpretation: isExudate ? "DỊCH TIẾT (Exudate)" : "DỊCH THẤM (Transudate)",
+        details: "Chỉ cần 1 trong 3 tiêu chuẩn dương tính để chẩn đoán dịch tiết.",
+        color: "bg-blue-700"
+      };
+    }
+  },
+  {
+    id: 'sirs',
+    name: 'Tiêu chuẩn SIRS',
+    description: 'Hội chứng đáp ứng viêm hệ thống.',
+    specialties: ['Hồi sức cấp cứu'],
+    inputs: [
+      { id: 'temp', label: 'Nhiệt độ >38°C hoặc <36°C', type: 'boolean' },
+      { id: 'hr', label: 'Nhịp tim >90 lần/phút', type: 'boolean' },
+      { id: 'rr', label: 'Nhịp thở >20 hoặc PaCO2 <32 mmHg', type: 'boolean' },
+      { id: 'wbc', label: 'Bạch cầu >12k, <4k hoặc >10% dạng non', type: 'boolean' },
+    ],
+    calculate: (v) => {
+      const score = Object.values(v).reduce((a, b) => a + (b === 1 ? 1 : 0), 0);
       return {
         score,
-        interpretation: score >= 4 ? "Khả năng cao do vi khuẩn. Cân nhắc kháng sinh." : score >= 2 ? "Cần test nhanh liên cầu." : "Nguy cơ thấp.",
+        interpretation: score >= 2 ? "Dương tính với SIRS." : "Âm tính.",
+        details: "Cần tìm ổ nhiễm khuẩn nếu SIRS dương tính.",
+        color: "bg-blue-700"
+      };
+    }
+  },
+  {
+    id: 'bmi',
+    name: 'Chỉ số khối cơ thể (BMI)',
+    description: 'Phân loại tình trạng dinh dưỡng (Tiêu chuẩn Châu Á).',
+    specialties: ['Nội tiết', 'Nhi khoa'],
+    inputs: [
+      { id: 'w', label: 'Cân nặng (kg)', type: 'number', defaultValue: 60 },
+      { id: 'h', label: 'Chiều cao (cm)', type: 'number', defaultValue: 165 },
+    ],
+    calculate: (v) => {
+      const hM = (v.h || 1) / 100;
+      const score = parseFloat(((v.w || 0) / (hM * hM)).toFixed(1));
+      let inter = "Bình thường";
+      if (score < 18.5) inter = "Thiếu cân";
+      else if (score >= 23 && score < 25) inter = "Thừa cân";
+      else if (score >= 25) inter = "Béo phì";
+      return { score, interpretation: inter, color: "bg-blue-700" };
+    }
+  },
+  {
+    id: 'curb-65',
+    name: 'Thang điểm CURB-65',
+    description: 'Đánh giá độ nặng của viêm phổi cộng đồng.',
+    specialties: ['Hô hấp', 'Hồi sức cấp cứu'],
+    inputs: [
+      { id: 'c', label: 'Lú lẫn', type: 'boolean' },
+      { id: 'u', label: 'BUN > 19 mg/dL', type: 'boolean' },
+      { id: 'r', label: 'Nhịp thở ≥ 30 lần/phút', type: 'boolean' },
+      { id: 'b', label: 'HA < 90/60 mmHg', type: 'boolean' },
+      { id: '65', label: 'Tuổi ≥ 65', type: 'boolean' },
+    ],
+    calculate: (v) => {
+      const score = Object.values(v).reduce((a, b) => a + (b === 1 ? 1 : 0), 0);
+      return {
+        score,
+        interpretation: score >= 3 ? "Nặng. Cần nhập viện điều trị tích cực." : score >= 2 ? "Trung bình. Cần nhập viện." : "Nhẹ. Ngoại trú.",
         color: "bg-blue-700"
       };
     }

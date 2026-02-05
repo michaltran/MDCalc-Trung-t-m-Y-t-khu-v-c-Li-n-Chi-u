@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { CALCULATORS, SPECIALTIES } from './constants';
 import { Calculator, Specialty } from './types';
@@ -25,22 +24,27 @@ const App: React.FC = () => {
     CALCULATORS.find(c => c.id === selectedCalcId), [selectedCalcId]
   );
 
+  const handleBack = () => {
+    setSelectedCalcId(null);
+    window.scrollTo(0, 0);
+  };
+
   if (selectedCalc) {
     return (
       <CalculatorView 
         calc={selectedCalc} 
-        onBack={() => setSelectedCalcId(null)} 
+        onBack={handleBack} 
         onNavigateToCalc={(id) => setSelectedCalcId(id)}
       />
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#fcfdfe]">
+    <div className="min-h-screen flex flex-col bg-[#f8fafc]">
       <header className="bg-white border-b border-gray-100 sticky top-0 z-40 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <div className="bg-blue-600 w-10 h-10 rounded-xl flex items-center justify-center shadow-lg shadow-blue-200">
+            <div className="bg-blue-600 w-10 h-10 rounded-xl flex items-center justify-center shadow-lg shadow-blue-200 cursor-pointer" onClick={() => setSelectedCalcId(null)}>
               <span className="text-white font-black text-xl italic tracking-tighter">LC</span>
             </div>
             <div>
@@ -53,7 +57,7 @@ const App: React.FC = () => {
             <div className="relative group">
               <input
                 type="text"
-                placeholder="Tìm bảng kiểm y khoa..."
+                placeholder="Tìm kiếm thang điểm y khoa..."
                 className="w-full bg-gray-50 border-2 border-transparent rounded-2xl py-3 px-12 text-sm focus:bg-white focus:border-blue-500 transition-all shadow-inner outline-none"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -99,26 +103,36 @@ const App: React.FC = () => {
              <h1 className="text-4xl font-black text-gray-900 tracking-tight">
                 {selectedSpecialty === 'Tất cả' ? 'Thư viện Bảng kiểm' : selectedSpecialty}
              </h1>
+             <p className="text-gray-500 mt-2">Dựa trên bằng chứng và hướng dẫn điều trị mới nhất.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {filteredCalculators.map(calc => (
+            {filteredCalculators.length > 0 ? filteredCalculators.map(calc => (
               <CalculatorCard 
                 key={calc.id} 
                 calc={calc} 
                 onClick={() => setSelectedCalcId(calc.id)} 
               />
-            ))}
+            )) : (
+              <div className="col-span-2 py-20 text-center text-gray-400 font-medium">
+                Không tìm thấy bảng kiểm phù hợp.
+              </div>
+            )}
           </div>
         </section>
       </main>
 
-      <footer className="bg-white border-t border-gray-100 py-10 px-4 mt-20">
+      <footer className="bg-white border-t border-gray-100 py-12 px-4 mt-20">
         <div className="max-w-7xl mx-auto text-center">
            <p className="text-gray-900 font-bold mb-2">mdcalc TTYT KV Liên Chiểu</p>
            <p className="text-gray-400 text-xs uppercase tracking-widest font-bold">
              ©Copyright Việt hóa và Design bởi Đạt Đạt
            </p>
+           <div className="mt-4 flex justify-center space-x-6 text-xs text-blue-600 font-bold uppercase tracking-wider">
+              <a href="#" className="hover:underline">Về chúng tôi</a>
+              <a href="#" className="hover:underline">Điều khoản</a>
+              <a href="#" className="hover:underline">Liên hệ</a>
+           </div>
         </div>
       </footer>
     </div>

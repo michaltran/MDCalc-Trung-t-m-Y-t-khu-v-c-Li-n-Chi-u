@@ -1,10 +1,13 @@
-
 import { GoogleGenAI } from "@google/genai";
-
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export async function getClinicalContext(calculatorName: string, result: string, score: number) {
   try {
+    const apiKey = process.env.API_KEY;
+    if (!apiKey) {
+      return "Cấu hình AI chưa sẵn sàng. Vui lòng kiểm tra API Key.";
+    }
+
+    const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: `Bạn là một bác sĩ cố vấn chuyên môn. Một bệnh nhân có kết quả từ công cụ "${calculatorName}" với số điểm là ${score} (${result}). 
