@@ -1,0 +1,5 @@
+{
+  "name": "VN-Calc: Công cụ tính toán Y khoa",
+  "description": "Một ứng dụng mô phỏng MDCalc được Việt hóa hoàn toàn, cung cấp các công cụ tính toán lâm sàng, thang điểm và hỗ trợ quyết định y khoa dựa trên bằng chứng.",
+  "requestFramePermissions": []
+}
