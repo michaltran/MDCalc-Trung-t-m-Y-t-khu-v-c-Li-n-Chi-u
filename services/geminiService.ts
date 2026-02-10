@@ -1,6 +1,5 @@
 'use server';
 import { GoogleGenAI } from "@google/genai";
-
 export async function getClinicalContext(calculatorName: string, result: string, score: number) {
   try {
     const apiKey = process.env.API_KEY;
