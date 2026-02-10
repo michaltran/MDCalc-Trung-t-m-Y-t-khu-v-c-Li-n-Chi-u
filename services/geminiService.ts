@@ -3,7 +3,7 @@ import { GoogleGenAI } from "@google/genai";
 
 export async function getClinicalContext(calculatorName: string, result: string, score: number) {
   try {
-    const apiKey = apiKey = process.env.API_KEY;
+    const apiKey = import.meta.env.VITE_API_KEY;
     if (!apiKey || apiKey === "") {
       console.warn("API Key is missing. AI features will not work.");
       return "Tính năng tư vấn AI chưa được cấu hình API Key. Vui lòng liên hệ quản trị viên (Đạt Đạt) để kích hoạt.";
