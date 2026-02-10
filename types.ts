@@ -8,7 +8,9 @@ export type Specialty =
   | 'Thần kinh' 
   | 'Sản phụ khoa' 
   | 'Nhi khoa'
-  | 'Hô hấp';
+  | 'Hô hấp'
+  | 'Ung bướu'
+  | 'Ngoại tiết niệu';
 
 export type InputType = 'boolean' | 'select' | 'number';
 
@@ -28,6 +30,13 @@ export interface Creator {
   image?: string;
 }
 
+export interface LiteratureItem {
+  type: 'original' | 'validation' | 'outcomes' | 'guideline' | 'other';
+  title: string;
+  citation: string;
+  pubmedId?: string;
+}
+
 export interface Calculator {
   id: string;
   name: string;
@@ -40,10 +49,36 @@ export interface Calculator {
     color: string;
     details?: string;
   };
-  evidence?: string;
-  whenToUse?: string;
-  pearls?: string;
+  whenToUse?: string[];
+  pearls?: string[];
   whyUse?: string;
+  nextSteps?: {
+    advice?: string[];
+    management?: {
+      title: string;
+      content: string;
+      bullets?: string[];
+    }[];
+    criticalActions?: string;
+  };
+  evidenceContent?: {
+    formula?: {
+      criteria: string;
+      subCriteria?: { label: string; points: string }[];
+      points?: string;
+    }[];
+    factsFigures?: {
+      score: number;
+      ischemicRisk?: string; // Reuse or generalize for RCC
+      totalRisk?: string;
+      survival5yr?: string;
+      survival10yr?: string;
+    }[];
+    appraisal?: string[];
+    literature?: LiteratureItem[];
+  };
+  creatorInsights?: string;
   creator?: Creator;
+  contributors?: string[];
   relatedIds?: string[];
 }

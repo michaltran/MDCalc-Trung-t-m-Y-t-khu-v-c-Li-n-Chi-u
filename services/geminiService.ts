@@ -3,13 +3,14 @@ import { GoogleGenAI } from "@google/genai";
 
 export async function getClinicalContext(calculatorName: string, result: string, score: number) {
   try {
-    const apiKey = "AIzaSyBc50Xv4IzEoFEN-WeCaYm1FQ2yAaX41ks";
+    const apiKey = process.env.API_KEY;
     if (!apiKey || apiKey === "") {
       console.warn("API Key is missing. AI features will not work.");
       return "Tính năng tư vấn AI chưa được cấu hình API Key. Vui lòng liên hệ quản trị viên (Đạt Đạt) để kích hoạt.";
     }
 
-    const ai = new GoogleGenAI({ apiKey });
+    // Always use a named parameter for initialization
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: `Bạn là một bác sĩ cố vấn cao cấp chuyên về các thang điểm y khoa. 
@@ -28,6 +29,7 @@ export async function getClinicalContext(calculatorName: string, result: string,
         temperature: 0.2,
       }
     });
+    // Use .text property directly (not a method)
     return response.text;
   } catch (error) {
     console.error("Gemini AI error:", error);

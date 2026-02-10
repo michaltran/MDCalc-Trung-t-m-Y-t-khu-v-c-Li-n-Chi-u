@@ -14,7 +14,9 @@ const CalculatorView: React.FC<CalculatorViewProps> = ({ calc, onBack, onNavigat
   const [values, setValues] = useState<Record<string, number>>({});
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [loadingAi, setLoadingAi] = useState(false);
-  const [activeTab, setActiveTab] = useState<'when' | 'pearls' | 'why'>('when');
+  
+  const [upperTab, setUpperTab] = useState<'when' | 'pearls' | 'why'>('when');
+  const [lowerTab, setLowerTab] = useState<'next' | 'evidence' | 'creator'>('next');
 
   useEffect(() => {
     const defaults: Record<string, number> = {};
@@ -38,208 +40,391 @@ const CalculatorView: React.FC<CalculatorViewProps> = ({ calc, onBack, onNavigat
     setValues(prev => ({ ...prev, [id]: val }));
   };
 
-  const renderInput = (input: CalculatorInput) => {
-    if (input.type === 'number') {
-      return (
-        <div className="flex items-center space-x-2">
-          <input 
-            type="number" 
-            className="border-2 border-gray-200 rounded-lg p-2.5 text-lg w-full focus:border-blue-500 outline-none transition-all font-semibold"
-            value={values[input.id] ?? ''}
-            onChange={(e) => updateValue(input.id, parseFloat(e.target.value) || 0)}
-          />
-          {input.unit && <span className="text-gray-500 font-bold text-sm w-16">{input.unit}</span>}
-        </div>
-      );
-    }
+  // Helper to get points for visualization
+  const getPointBreakdown = () => {
+    return calc.inputs.map(input => {
+      let points = 0;
+      if (input.id === 'stroke' && values[input.id] === 1) {
+        points = 2; // Specific logic for stroke in CHA2DS2-VASc
+      } else {
+        points = values[input.id] || 0;
+      }
+      return {
+        label: input.label.split('(')[0].trim(), // Clean labels for the chart
+        points: points
+      };
+    }).filter(item => item.points > 0);
+  };
 
+  const pointBreakdown = getPointBreakdown();
+  
+  // Calculate dynamic max points for the chart based on current calculator inputs
+  const maxPointsPossible = Math.max(
+    ...calc.inputs.flatMap(i => 
+      i.type === 'select' ? (i.options?.map(o => Math.abs(o.value)) || [1]) : [1]
+    ), 1
+  );
+
+  const renderInput = (input: CalculatorInput) => {
     const options = input.type === 'boolean' 
       ? [{ label: 'Không', value: 0 }, { label: 'Có', value: 1 }]
       : input.options || [];
 
     return (
-      <div className="flex flex-wrap gap-2">
-        {options.map((opt) => (
-          <button
-            key={opt.label}
-            onClick={() => updateValue(input.id, opt.value)}
-            className={`px-4 py-2.5 rounded-lg text-sm font-bold border-2 transition-all flex-1 min-w-[80px]
-              ${values[input.id] === opt.value 
-                ? 'bg-blue-600 text-white border-blue-600 shadow-md' 
-                : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'}`}
-          >
-            {opt.label}
-            <span className="ml-1 opacity-50 text-[10px]">
-               {opt.displayValue || (opt.value > 0 ? `+${opt.value}` : '')}
-            </span>
-          </button>
-        ))}
+      <div className="flex border border-gray-300 rounded overflow-hidden">
+        {options.map((opt) => {
+          const isSelected = values[input.id] === opt.value;
+          return (
+            <button
+              key={opt.label}
+              onClick={() => updateValue(input.id, opt.value)}
+              className={`flex-1 px-4 py-2.5 text-sm font-medium transition-all flex items-center justify-between border-r last:border-r-0 border-gray-300
+                ${isSelected 
+                  ? 'bg-[#1261A6] text-white' 
+                  : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+            >
+              <span className="font-bold">{opt.label}</span>
+              <span className={`text-[11px] ml-2 ${isSelected ? 'text-white/80' : 'text-gray-400'}`}>
+                {opt.displayValue || (opt.value > 0 ? `+${opt.value}` : '0')}
+              </span>
+            </button>
+          );
+        })}
       </div>
     );
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 bg-[#f8fafc] min-h-screen">
-      <nav className="mb-6">
-        <button 
-          onClick={onBack}
-          className="flex items-center text-blue-600 font-black text-sm uppercase tracking-tighter hover:opacity-80 transition-opacity"
-        >
+    <div className="max-w-7xl mx-auto px-4 py-8 bg-[#f3f4f6] min-h-screen font-sans">
+      <nav className="mb-4">
+        <button onClick={onBack} className="text-[#1261A6] font-bold text-sm flex items-center hover:underline uppercase tracking-tighter">
           <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15 19l-7-7 7-7"></path></svg>
-          DANH SÁCH CÔNG CỤ
+          Quay lại danh sách
         </button>
       </nav>
 
-      <div className="flex flex-col lg:flex-row gap-10">
-        <div className="flex-1 space-y-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="lg:col-span-8 space-y-6">
           <header>
-             <h1 className="text-4xl font-black text-gray-900 mb-2 tracking-tight">{calc.name}</h1>
-             <p className="text-gray-500 font-medium">{calc.description}</p>
+            <h1 className="text-3xl font-extrabold text-[#1261A6] leading-tight mb-2">{calc.name}</h1>
+            <p className="text-gray-600 text-lg">{calc.description}</p>
           </header>
 
-          <div className="bg-white border-2 border-gray-100 rounded-3xl overflow-hidden shadow-sm">
-            <div className="flex bg-gray-50 border-b-2 border-gray-100">
-              <button 
-                onClick={() => setActiveTab('when')}
-                className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-r-2 border-gray-100 transition-all ${activeTab === 'when' ? 'bg-white text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
-              >
-                Chỉ định
-              </button>
-              <button 
-                onClick={() => setActiveTab('pearls')}
-                className={`px-6 py-4 text-xs font-black uppercase tracking-widest border-r-2 border-gray-100 transition-all ${activeTab === 'pearls' ? 'bg-white text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
-              >
-                Lưu ý
-              </button>
-              <button 
-                onClick={() => setActiveTab('why')}
-                className={`px-6 py-4 text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'why' ? 'bg-white text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
-              >
-                Cơ sở
-              </button>
+          <div className="bg-white border border-gray-200 rounded shadow-sm overflow-hidden">
+            <div className="flex bg-gray-50 border-b border-gray-200">
+              {[
+                {id: 'when', label: 'Chỉ định'},
+                {id: 'pearls', label: 'Lưu ý lâm sàng'},
+                {id: 'why', label: 'Tại sao sử dụng'}
+              ].map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setUpperTab(t.id as any)}
+                  className={`px-8 py-3 text-sm font-bold border-r border-gray-200 flex items-center
+                    ${upperTab === t.id ? 'bg-[#1261A6] text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+                >
+                  {t.label}
+                  <svg className={`ml-2 w-3 h-3 transform transition-transform ${upperTab === t.id ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+              ))}
             </div>
-            <div className="p-6 text-gray-700 text-sm leading-relaxed font-medium">
-               {activeTab === 'when' && (calc.whenToUse || "Sử dụng để sàng lọc và đánh giá ban đầu trên lâm sàng.")}
-               {activeTab === 'pearls' && (calc.pearls || "Kết quả tính toán chỉ mang tính chất tham khảo, không thay thế chẩn đoán của bác sĩ.")}
-               {activeTab === 'why' && (calc.whyUse || "Dựa trên các nghiên cứu lâm sàng đã được công bố.")}
+            <div className="p-6 bg-[#f8fafc] text-[#4a4a4a] text-sm leading-relaxed border-b border-gray-100">
+              {upperTab === 'when' && (
+                <ul className="list-disc pl-5 space-y-2">
+                  {calc.whenToUse?.map((p, i) => <li key={i}>{p}</li>) || <li>Không có thông tin.</li>}
+                </ul>
+              )}
+              {upperTab === 'pearls' && (
+                <ul className="list-disc pl-5 space-y-2 font-medium">
+                  {calc.pearls?.map((p, i) => <li key={i}>{p}</li>) || <li>Không có ghi chú.</li>}
+                </ul>
+              )}
+              {upperTab === 'why' && <p className="font-medium">{calc.whyUse || "Sử dụng cho thực hành dựa trên bằng chứng."}</p>}
             </div>
           </div>
 
-          <div className="bg-white border-2 border-gray-100 rounded-3xl shadow-sm p-2">
-            <table className="w-full">
-              <tbody>
-                {calc.inputs.map((input, idx) => (
-                  <tr key={input.id} className={`${idx !== calc.inputs.length - 1 ? 'border-b-2 border-gray-50' : ''}`}>
-                    <td className="p-5 w-1/2">
-                      <label className="font-bold text-gray-900 text-base">{input.label}</label>
-                      {input.helpText && <p className="text-xs text-gray-400 mt-1">{input.helpText}</p>}
-                    </td>
-                    <td className="p-5 w-1/2">
-                      {renderInput(input)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="bg-white p-6 rounded border border-gray-200 shadow-sm space-y-4">
+            {calc.inputs.map((input) => (
+              <div key={input.id} className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center py-3 border-b border-gray-50 last:border-0">
+                <div className="text-gray-700 font-bold text-sm">
+                  {input.label}
+                </div>
+                <div>{renderInput(input)}</div>
+              </div>
+            ))}
           </div>
 
-          <div className={`${result.color} rounded-[2rem] p-10 text-white shadow-2xl shadow-blue-200 transition-all`}>
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-               <div className="flex-1">
-                  <div className="flex items-baseline mb-4">
-                    <span className="text-7xl font-black mr-3">{result.score}</span>
-                    <span className="text-2xl font-bold opacity-80 uppercase tracking-widest">Điểm</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className={`${result.color} p-8 text-white rounded-xl shadow-lg flex flex-col justify-center`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-5xl font-black mb-2">{result.score} <span className="text-xl font-normal opacity-80">điểm</span></div>
+                  <div className="text-2xl font-bold">{result.interpretation}</div>
+                  {result.details && <div className="mt-2 text-white/90 italic text-sm">{result.details}</div>}
+                </div>
+                <div className="bg-white/20 p-4 rounded-full">
+                   <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+              </div>
+            </div>
+
+            {/* Visual Point Breakdown Bar Chart */}
+            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-center">
+              <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Phân bổ điểm số</h4>
+              {pointBreakdown.length > 0 ? (
+                <div className="space-y-3">
+                  {pointBreakdown.map((item, idx) => (
+                    <div key={idx} className="space-y-1">
+                      <div className="flex justify-between text-[11px] font-bold text-gray-600">
+                        <span>{item.label}</span>
+                        <span>+{item.points}</span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                        <div 
+                          className="bg-[#1261A6] h-full transition-all duration-500 ease-out"
+                          style={{ width: `${(item.points / maxPointsPossible) * 100}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-4 text-gray-400 text-sm italic">
+                  Chưa có tiêu chí nào được tính điểm.
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-white border border-gray-200 rounded shadow-sm overflow-hidden mt-8">
+            <div className="flex bg-gray-50 border-b border-gray-200">
+              {[
+                {id: 'next', label: 'Hướng xử trí', icon: 'M13 5l7 7-7 7M5 5l7 7-7 7'},
+                {id: 'evidence', label: 'Bằng chứng khoa học', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'},
+                {id: 'creator', label: 'Góc nhìn tác giả', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z'}
+              ].map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setLowerTab(t.id as any)}
+                  className={`flex-1 px-4 py-3 text-sm font-bold border-r border-gray-200 flex items-center justify-center
+                    ${lowerTab === t.id ? 'bg-[#1261A6] text-white' : 'text-gray-500 hover:bg-gray-100'}`}
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={t.icon}></path></svg>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            <div className="p-8 bg-white text-[#4a4a4a]">
+              {lowerTab === 'next' && (
+                <div className="space-y-6">
+                  {calc.nextSteps?.advice && (
+                    <section>
+                      <h4 className="font-black text-[#1261A6] uppercase text-xs tracking-widest mb-3">LỜI KHUYÊN LÂM SÀNG</h4>
+                      <ul className="list-disc pl-5 space-y-2 text-sm font-medium">
+                        {calc.nextSteps.advice.map((a, i) => <li key={i}>{a}</li>)}
+                      </ul>
+                    </section>
+                  )}
+                  {calc.nextSteps?.management?.map((m, i) => (
+                    <section key={i}>
+                      <h4 className="font-black text-[#1261A6] uppercase text-xs tracking-widest mb-3">{m.title}</h4>
+                      <p className="text-sm font-medium mb-3">{m.content}</p>
+                      <ul className="list-disc pl-5 space-y-2 text-sm font-medium">
+                        {m.bullets?.map((b, bi) => <li key={bi}>{b}</li>)}
+                      </ul>
+                    </section>
+                  ))}
+                  {calc.nextSteps?.criticalActions && (
+                    <section className="bg-red-50 p-4 rounded-lg border-l-4 border-red-500">
+                      <h4 className="font-black text-red-600 uppercase text-xs tracking-widest mb-2">HÀNH ĐỘNG KHẨN CẤP</h4>
+                      <p className="text-sm font-medium">{calc.nextSteps.criticalActions}</p>
+                    </section>
+                  )}
+                </div>
+              )}
+              {lowerTab === 'evidence' && (
+                <div className="space-y-12">
+                  <section>
+                    <h3 className="font-black text-[#1261A6] uppercase text-lg mb-2">CÔNG THỨC (FORMULA)</h3>
+                    <p className="text-xs text-gray-500 mb-4 italic">Cộng các điểm tương ứng với các tiêu chí sau:</p>
+                    <table className="w-full text-sm border-collapse">
+                      <thead>
+                        <tr className="border-b-2 border-gray-200">
+                          <th className="text-left py-2 font-black text-gray-800">Tiêu chí</th>
+                          <th className="text-right py-2 font-black text-gray-800">Điểm</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {calc.evidenceContent?.formula?.map((f, i) => (
+                          <React.Fragment key={i}>
+                            <tr className="border-b border-gray-100">
+                              <td className="py-2.5 font-bold text-gray-700">{f.criteria}</td>
+                              <td className="py-2.5 text-right font-bold text-gray-700">{f.points || ''}</td>
+                            </tr>
+                            {f.subCriteria?.map((s, si) => (
+                              <tr key={`${i}-${si}`} className="border-b border-gray-50 bg-gray-50/30">
+                                <td className="py-2 pl-8 text-gray-600">{s.label}</td>
+                                <td className="py-2 text-right text-gray-600">{s.points}</td>
+                              </tr>
+                            ))}
+                          </React.Fragment>
+                        ))}
+                      </tbody>
+                    </table>
+                  </section>
+
+                  {calc.evidenceContent?.factsFigures && (
+                    <section>
+                      <h3 className="font-black text-[#1261A6] uppercase text-lg mb-4">SỐ LIỆU & Ý NGHĨA (FACTS & FIGURES)</h3>
+                      <div className="overflow-x-auto rounded-lg border border-gray-200">
+                        <table className="w-full text-sm border-collapse">
+                          <thead>
+                            <tr className="bg-gray-50 text-[#126DA6] border-b border-gray-200">
+                              <th className="text-left p-3">Điểm số</th>
+                              {calc.evidenceContent.factsFigures[0].ischemicRisk && <th className="text-left p-3">Rủi ro/Biến cố 1</th>}
+                              {calc.evidenceContent.factsFigures[0].totalRisk && <th className="text-left p-3">Rủi ro/Biến cố 2</th>}
+                              {calc.evidenceContent.factsFigures[0].survival5yr && <th className="text-left p-3">Sống sót 5 năm</th>}
+                              {calc.evidenceContent.factsFigures[0].survival10yr && <th className="text-left p-3">Sống sót 10 năm</th>}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {calc.evidenceContent.factsFigures.map((row, i) => (
+                              <tr key={i} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                <td className="p-3 font-bold">{row.score}</td>
+                                {row.ischemicRisk && <td className="p-3">{row.ischemicRisk}</td>}
+                                {row.totalRisk && <td className="p-3">{row.totalRisk}</td>}
+                                {row.survival5yr && <td className="p-3">{row.survival5yr}</td>}
+                                {row.survival10yr && <td className="p-3">{row.survival10yr}</td>}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  )}
+
+                  <section>
+                    <h3 className="font-black text-[#1261A6] uppercase text-lg mb-4">ĐÁNH GIÁ BẰNG CHỨNG</h3>
+                    <div className="space-y-4 text-sm leading-relaxed text-gray-700">
+                      {calc.evidenceContent?.appraisal?.map((p, i) => (
+                        <p key={i} className="bg-blue-50/30 p-3 rounded border-l-2 border-[#1261A6]">{p}</p>
+                      ))}
+                    </div>
+                  </section>
+
+                  <section>
+                    <h3 className="font-black text-[#1261A6] uppercase text-lg mb-4">TÀI LIỆU THAM KHẢO</h3>
+                    <div className="space-y-6">
+                       {[
+                         { id: 'original', label: 'THAM CHIẾU GỐC / CHÍNH' },
+                         { id: 'validation', label: 'NGHIÊN CỨU XÁC THỰC' },
+                         { id: 'guideline', label: 'HƯỚNG DẪN THỰC HÀNH LÂM SÀNG' }
+                       ].map(cat => (
+                         <div key={cat.id}>
+                            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">{cat.label}</h4>
+                            <div className="space-y-3">
+                              {calc.evidenceContent?.literature?.filter(l => l.type === cat.id).map((l, li) => (
+                                <div key={li} className="bg-white border border-gray-100 p-4 rounded-lg flex items-start space-x-4 shadow-sm">
+                                   <div className="bg-[#1261A6] p-2 rounded shadow-sm">
+                                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                                   </div>
+                                   <div className="flex-1 text-xs">
+                                      <p className="font-bold text-[#126DA6] text-sm mb-1">{l.citation}</p>
+                                      {l.pubmedId && <p className="text-gray-500">Mã PubMed (PMID): <span className="text-[#126DA6] font-bold">{l.pubmedId}</span></p>}
+                                   </div>
+                                </div>
+                              ))}
+                            </div>
+                         </div>
+                       ))}
+                    </div>
+                  </section>
+                </div>
+              )}
+              {lowerTab === 'creator' && (
+                <div className="bg-gray-50 p-6 rounded-lg text-sm italic font-medium text-gray-600 border border-gray-100">
+                  {calc.creatorInsights || "Đang cập nhật nội dung từ tác giả..."}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <button 
+            onClick={async () => {
+              setLoadingAi(true);
+              const analysis = await getClinicalContext(calc.name, result.interpretation, result.score);
+              setAiAnalysis(analysis);
+              setLoadingAi(false);
+            }}
+            className="w-full mt-6 py-4 bg-[#1261A6] text-white font-bold rounded-xl hover:bg-[#126DA6] transition-all flex items-center justify-center space-x-2 shadow-lg active:scale-[0.98]"
+          >
+            {loadingAi ? 'AI đang phân tích...' : 'Nhận phân tích từ Cố vấn AI cho ca lâm sàng này'}
+          </button>
+          
+          {aiAnalysis && (
+            <div className="mt-4 p-6 bg-blue-50 border border-blue-100 rounded-xl text-gray-800 leading-relaxed shadow-sm animate-fade-in">
+               <div className="flex items-center space-x-2 mb-3">
+                  <div className="bg-[#1261A6] p-1.5 rounded-full">
+                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                   </div>
-                  <h2 className="text-3xl font-black leading-tight mb-4">{result.interpretation}</h2>
-                  {result.details && <p className="text-white/80 font-semibold border-l-4 border-white/30 pl-4">{result.details}</p>}
+                  <div className="text-sm font-black text-[#1261A6] uppercase tracking-wider">CỐ VẤN AI LÂM SÀNG</div>
                </div>
-               
-               <div className="flex flex-col gap-3 min-w-[200px]">
-                  <button className="bg-white/20 hover:bg-white/30 backdrop-blur-md px-6 py-4 rounded-2xl font-black text-sm uppercase tracking-wider transition-all active:scale-95 flex items-center justify-center">
-                    Sao chép KQ <span className="ml-2">📋</span>
-                  </button>
-                  <button className="bg-white text-blue-800 px-6 py-4 rounded-2xl font-black text-sm uppercase tracking-wider transition-all hover:bg-gray-100 active:scale-95 flex items-center justify-center shadow-lg">
-                    Pháp đồ <span className="ml-2">➔</span>
-                  </button>
-               </div>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-             <button
-               onClick={async () => {
-                 setLoadingAi(true);
-                 const analysis = await getClinicalContext(calc.name, result.interpretation, result.score);
-                 setAiAnalysis(analysis);
-                 setLoadingAi(false);
-               }}
-               className="w-full py-5 bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-black text-lg rounded-2xl hover:shadow-xl transition-all flex items-center justify-center shadow-lg shadow-blue-100 disabled:opacity-50"
-               disabled={loadingAi}
-             >
-               {loadingAi ? (
-                 <span className="flex items-center">
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                    Đang hội chẩn AI...
-                 </span>
-               ) : (
-                 <span className="flex items-center">
-                    Tư vấn chuyên sâu Bác sĩ AI ✨
-                 </span>
-               )}
-             </button>
-
-             {aiAnalysis && (
-               <div className="bg-white border-2 border-blue-50 rounded-3xl p-8 shadow-sm relative overflow-hidden">
-                 <div className="absolute top-0 right-0 p-4">
-                    <span className="bg-blue-100 text-blue-700 text-[10px] font-black px-2 py-1 rounded uppercase">Clinical AI Advisor</span>
-                 </div>
-                 <h3 className="text-blue-900 font-black mb-6 text-xl border-b-2 border-blue-50 pb-4">Phân tích từ Đạt Đạt AI Assistant</h3>
-                 <div className="text-gray-800 whitespace-pre-line leading-loose font-medium">{aiAnalysis}</div>
-               </div>
-             )}
-          </div>
-        </div>
-
-        <aside className="w-full lg:w-96 space-y-8">
-          {calc.creator && (
-            <div className="bg-white border-2 border-gray-100 rounded-3xl overflow-hidden shadow-sm">
-               <div className="bg-gray-50 p-4 text-[10px] font-black uppercase tracking-widest text-gray-400 border-b-2 border-gray-100">
-                 Hội đồng chuyên môn
-               </div>
-               <div className="p-6 flex items-center space-x-5">
-                  <img src={calc.creator.image} className="w-20 h-20 rounded-2xl bg-blue-50 object-cover border-2 border-white shadow-sm" alt={calc.creator.name} />
-                  <div>
-                    <h4 className="font-black text-gray-900 text-lg leading-tight">
-                      {calc.creator.name}
-                    </h4>
-                    <p className="text-xs text-blue-600 font-bold mt-1 uppercase tracking-tighter">{calc.creator.title}</p>
-                  </div>
-               </div>
+               <div className="whitespace-pre-line text-sm font-medium">{aiAnalysis}</div>
             </div>
           )}
+        </div>
 
-          <div className="bg-blue-900 rounded-[2.5rem] overflow-hidden shadow-xl">
-             <div className="p-5 text-[10px] font-black uppercase tracking-[0.2em] text-blue-300 bg-blue-950/50">
-               Có thể bạn quan tâm
+        <div className="lg:col-span-4 space-y-6">
+          <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+            <div className="bg-[#1261A6] p-3 text-[10px] font-black uppercase tracking-widest text-white">
+              Về Tác giả
+            </div>
+            <div className="p-5 flex items-start space-x-4">
+              <img src={calc.creator?.image} className="w-20 h-20 rounded-xl border-2 border-gray-50 shadow-sm object-cover" alt={calc.creator?.name} />
+              <div className="flex-1">
+                <div className="flex items-center">
+                  <h4 className="font-bold text-gray-800 text-lg">{calc.creator?.name}</h4>
+                  <svg className="ml-1.5 w-4 h-4 text-[#1261A6]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path></svg>
+                </div>
+                <p className="text-xs text-gray-500 mt-1 font-medium">{calc.creator?.title}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-[#126DA6] text-white rounded-xl shadow-md overflow-hidden">
+             <div className="p-3 text-[10px] font-black uppercase tracking-widest opacity-80 border-b border-white/10">
+               Công cụ liên quan
              </div>
-             <div className="p-6 space-y-6">
+             <div className="p-4 space-y-4">
                 {calc.relatedIds?.map(id => {
                   const related = CALCULATORS.find(c => c.id === id);
-                  if (!related) return null;
                   return (
-                    <button 
-                      key={id}
-                      onClick={() => onNavigateToCalc?.(id)}
-                      className="w-full text-left group"
-                    >
-                      <h4 className="text-white font-black text-sm group-hover:text-blue-300 transition-colors">{related.name}</h4>
-                      <p className="text-blue-200/60 text-[11px] mt-1 line-clamp-2 font-medium">{related.description}</p>
+                    <button key={id} onClick={() => onNavigateToCalc?.(id)} className="w-full text-left group flex items-start space-x-3">
+                      <div className="mt-1 bg-white/10 p-1 rounded group-hover:bg-white/20 transition-all">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path></svg>
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-bold text-sm text-blue-100 group-hover:underline">{related?.name}</div>
+                        <div className="text-[11px] opacity-70 leading-tight mt-1">{related?.description}</div>
+                      </div>
                     </button>
                   );
                 })}
              </div>
           </div>
-        </aside>
+
+          <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
+             <div className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4">Người đóng góp</div>
+             <ul className="space-y-3">
+                {calc.contributors?.map(c => (
+                  <li key={c} className="flex items-center space-x-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#1261A6]"></div>
+                    <span className="text-sm font-bold text-gray-700">{c}</span>
+                  </li>
+                ))}
+             </ul>
+          </div>
+        </div>
       </div>
     </div>
   );

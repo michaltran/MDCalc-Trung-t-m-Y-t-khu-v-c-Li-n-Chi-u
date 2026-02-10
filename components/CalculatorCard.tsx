@@ -11,17 +11,17 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calc, onClick }) => {
   return (
     <button
       onClick={onClick}
-      className="bg-white border border-gray-200 rounded-xl p-5 text-left transition-all hover:shadow-md hover:border-blue-500 group"
+      className="bg-white border border-gray-100 rounded-2xl p-6 text-left transition-all hover:shadow-xl hover:border-[#1261A6] group shadow-sm active:scale-[0.98]"
     >
-      <div className="flex justify-between items-start mb-2">
-        <h3 className="font-bold text-gray-900 group-hover:text-blue-700 transition-colors">
+      <div className="flex justify-between items-start mb-3">
+        <h3 className="font-extrabold text-gray-800 group-hover:text-[#1261A6] transition-colors text-lg leading-snug">
           {calc.name}
         </h3>
-        <span className="text-[10px] bg-blue-50 text-blue-700 px-2 py-1 rounded uppercase font-bold tracking-wider">
+        <span className="text-[9px] bg-blue-50 text-[#1261A6] px-2.5 py-1.5 rounded-lg uppercase font-black tracking-widest border border-blue-100">
           {calc.specialties[0]}
         </span>
       </div>
-      <p className="text-sm text-gray-500 line-clamp-2">
+      <p className="text-sm text-gray-500 line-clamp-2 font-medium leading-relaxed">
         {calc.description}
       </p>
     </button>
